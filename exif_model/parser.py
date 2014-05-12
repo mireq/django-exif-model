@@ -21,11 +21,15 @@ class BaseParser(object):
 
 
 class GExiv2Parser(BaseParser):
-	def __init__(self, filename):
+	def __init__(self, filename=None, filebuf=None):
 		super(BaseParser, self).__init__(filename)
 
 		from gi.repository import GExiv2
-		self.exif = GExiv2.Metadata(filename)
+		self.exif = GExiv2.Metadata()
+		if filebuf is None:
+			exif.open_buf(filebuf)
+		else:
+			exif.open_path(filename)
 		self.changed = False
 
 	def metadata(self):
