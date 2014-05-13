@@ -3,11 +3,14 @@ from django.utils.functional import cached_property
 
 
 class BaseParser(object):
-	def __init__(self, filename):
-		self.filename = filename
+	class ParseError(Exception):
+		pass
 
 	@cached_property
 	def metadata(self):
+		return self.get_metadata()
+
+	def get_metadata(self):
 		raise NotImplementedError
 
 	def get_metadata_tag(self, tag, default=None):
@@ -22,18 +25,20 @@ class BaseParser(object):
 
 class GExiv2Parser(BaseParser):
 	def __init__(self, filename=None, filebuf=None):
-		super(BaseParser, self).__init__(filename)
-
 		from gi.repository import GExiv2
+		from gi.repository import GObject
 		self.exif = GExiv2.Metadata()
-		if filebuf is None:
-			exif.open_buf(filebuf)
-		else:
-			exif.open_path(filename)
 		self.changed = False
+		try:
+			if filebuf is None:
+				self.exif.open_path(filename)
+			else:
+				self.exif.open_buf(filebuf)
+		except GObject.GError:
+			raise GExiv2Parser.ParseError("Bad image format")
 
-	def metadata(self):
-		return dict((t, exif.get_tag_string(t)) for t in self.exif.get_tags())
+	def get_metadata(self):
+		return dict((t, self.exif.get_tag_string(t)) for t in self.exif.get_tags())
 
 	def set_metadata_tag(self, tag, value):
 		self.exif.set_tag_string(tag, value)
